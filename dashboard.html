@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Congress AI Live Intelligence</title>
+
+    <style>
+        body {
+            background: #0f1117;
+            color: #e6e6e6;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #00ff99;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #4fd1ff;
+            margin-bottom: 12px;
+        }
+
+        .status {
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #00ff99;
+        }
+
+        .panel {
+            background: #1a1d26;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: #222733;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .title {
+            color: #00ff99;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .metric {
+            display: inline-block;
+            margin-right: 15px;
+            margin-bottom: 10px;
+        }
+
+        .small {
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Congress AI Live Intelligence Dashboard</h1>
+
+<div class="status" id="status">Connecting...</div>
+
+<!-- ================= SUMMARY ================= -->
+<div class="panel">
+    <h2>System Summary</h2>
+    <div id="summary"></div>
+</div>
+
+<!-- ================= TRENDS ================= -->
+<div class="panel">
+    <h2>Purchase & Sale Trends</h2>
+    <div id="trends"></div>
+</div>
+
+<!-- ================= ALERTS ================= -->
+<div class="panel">
+    <h2>Live Alerts</h2>
+    <div id="alerts"></div>
+</div>
+
+<!-- ================= CLUSTERS ================= -->
+<div class="panel">
+    <h2>Cluster Intelligence</h2>
+    <div id="clusters"></div>
+</div>
+
+<!-- ================= PREDICTIONS ================= -->
+<div class="panel">
+    <h2>Predictive Signals</h2>
+    <div id="predictions"></div>
+</div>
+
+<!-- ================= TOP SIGNALS ================= -->
+<div class="panel">
+    <h2>🔥 Top Signals</h2>
+    <div id="top-signals"></div>
+</div>
+<script>
+
+// ================= CONNECT =================
+const ws = new WebSocket("ws://127.0.0.1:8000/ws/intelligence");
+
+
+// ================= SUMMARY =================
+function renderSummary(summary) {
+
+    document.getElementById("summary").innerHTML = `
+        <div class="card">
+            <div class="metric">Trades: <b>${summary.trades || 0}</b></div>
+            <div class="metric">Alerts: <b>${summary.alerts || 0}</b></div>
+            <div class="metric">Clusters: <b>${summary.clusters || 0}</b></div>
+            <div class="metric">Predictions: <b>${summary.predictions || 0}</b></div>
+            <div class="metric">Clients: <b>${summary.connected_clients || 0}</b></div>
+        </div>
+    `;
+}
+
+
+// ================= ALERTS =================
+function renderAlerts(alerts) {
+
+    if (!alerts.length) {
+        document.getElementById("alerts").innerHTML =
+            `<div class="card">No active alerts</div>`;
+        return;
+    }
+
+    let html = "";
+
+    alerts.forEach(alert => {
+
+        const trade = alert.trade || {};
+
+        html += `
+            <div class="card">
+                <div class="title">
+                    ${trade.member_name || "Unknown"} → ${trade.ticker || "N/A"}
+                </div>
+
+                <div>
+                    Confidence: <b>${alert.confidence || "N/A"}</b>
+                </div>
+
+                <div>
+                    Final Score: ${alert.final_score || 0}
+                </div>
+
+                <div class="small">
+                    ${(alert.reasons || []).join(", ")}
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById("alerts").innerHTML = html;
+}
+
+
+// ================= CLUSTERS =================
+function renderClusters(clusters) {
+
+    if (!clusters.length) {
+        document.getElementById("clusters").innerHTML =
+            `<div class="card">No active clusters</div>`;
+        return;
+    }
+
+    let html = "";
+
+    clusters.forEach(c => {
+
+        html += `
+            <div class="card">
+                <div class="title">${c.ticker || "Unknown"}</div>
+
+                <div>Members: ${c.member_count || 0}</div>
+                <div>Alerts: ${c.alert_count || 0}</div>
+                <div>Avg Score: ${c.avg_score || 0}</div>
+            </div>
+        `;
+    });
+
+    document.getElementById("clusters").innerHTML = html;
+}
+
+
+// ================= PREDICTIONS =================
+function renderPredictions(predictions) {
+
+    if (!predictions.length) {
+        document.getElementById("predictions").innerHTML =
+            `<div class="card">No predictive signals</div>`;
+        return;
+    }
+
+    let html = "";
+
+    predictions.forEach(p => {
+
+        html += `
+            <div class="card">
+                <div class="title">${p.ticker || "Unknown"}</div>
+
+                <div>
+                    Formation Probability:
+                    <b>${p.formation_probability || 0}</b>
+                </div>
+
+                <div>
+                    Stage: ${p.stage || "N/A"}
+                </div>
+
+                <div class="small">
+                    Members: ${p.member_count || 0} |
+                    Alerts: ${p.alert_count || 0}
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById("predictions").innerHTML = html;
+}
+
+
+// ================= TRENDS (FIXED + REQUIRED) =================
+function renderTrends(trends) {
+
+    if (!trends || !trends.length) {
+        document.getElementById("trends").innerHTML =
+            `<div class="card">No trend data yet</div>`;
+        return;
+    }
+
+    let html = "";
+
+    trends.forEach(t => {
+
+        html += `
+            <div class="card">
+
+                <div class="title">${t.ticker || "Unknown"}</div>
+
+                <div>
+                    BUY: <b>${t.buy_volume || 0}</b> |
+                    SELL: <b>${t.sell_volume || 0}</b>
+                </div>
+
+                <div>
+                    NET: <b>${t.net || 0}</b>
+                </div>
+
+                <div class="small">
+                    ${t.trend || "neutral"}
+                </div>
+
+            </div>
+        `;
+    });
+
+    document.getElementById("trends").innerHTML = html;
+}
+
+// ================= TOP SIGNALS =================
+function renderTopSignals(signals) {
+
+    if (!Array.isArray(signals)) {
+        console.warn("Top Signals invalid:", signals);
+        signals = [];
+    }
+
+    const container = document.getElementById("top-signals");
+
+    if (!container) {
+        console.error("Missing #top-signals element");
+        return;
+    }
+
+    if (signals.length === 0) {
+        container.innerHTML =
+            `<div class="card">No high-confidence signals</div>`;
+        return;
+    }
+
+    let html = "";
+
+    signals.forEach(s => {
+
+        html += `
+            <div class="card">
+                <div class="title">${s.ticker || "Unknown"}</div>
+
+                <div>
+                    Direction: <b>${s.direction || "N/A"}</b>
+                </div>
+
+                <div>
+                    Strength: <b>${s.strength || "N/A"}</b>
+                </div>
+
+                <div>
+                    Score: ${s.avg_score ?? 0}
+                </div>
+
+                <div>
+                    BUY: ${s.buy_alerts ?? 0} |
+                    SELL: ${s.sell_alerts ?? 0}
+                </div>
+
+                <div class="small">
+                    Members: ${s.member_count ?? 0}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// ================= SOCKET OPEN =================
+ws.onopen = () => {
+    document.getElementById("status").innerText = "LIVE";
+    ws.send("start");
+};
+
+
+// ================= SOCKET MESSAGE =================
+ws.onmessage = (event) => {
+
+    const data = JSON.parse(event.data);
+
+    console.log("WS DATA:", data);
+
+    renderSummary(data.summary || {});
+    renderTopSignals(data.top_signals || []);
+    renderTrends(data.trends || []); // ✅ CRITICAL FIX
+    renderAlerts(data.alerts || []);
+    renderClusters(data.clusters || []);
+    renderPredictions(data.predictions || []);
+};
+
+
+// ================= SOCKET ERROR =================
+ws.onerror = () => {
+    document.getElementById("status").innerText = "ERROR";
+};
+
+
+// ================= SOCKET CLOSE =================
+ws.onclose = () => {
+    document.getElementById("status").innerText = "DISCONNECTED";
+};
+
+</script>
+
+</body>
+</html>
